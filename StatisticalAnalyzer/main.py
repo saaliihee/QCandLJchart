@@ -1,0 +1,153 @@
+import streamlit as st
+import plotly.graph_objects as go
+import numpy as np
+from utils import calculate_statistics, validate_input
+
+# Page configuration
+st.set_page_config(
+    page_title="Statistical Analysis Tool",
+    layout="wide"
+)
+
+# Title and introduction
+st.title("Statistical Analysis Calculator")
+st.markdown("""
+This tool allows you to analyze 20 data points with various statistical measures.
+Please enter your numerical values below.
+""")
+
+# Initialize session state for data points
+if 'data_points' not in st.session_state:
+    st.session_state.data_points = [''] * 20
+
+# Create input form
+st.subheader("Enter 20 Data Points")
+
+# Create 4 columns with 5 inputs each for better organization
+cols = st.columns(4)
+valid_inputs = []
+has_error = False
+
+for i in range(20):
+    col_idx = i // 5
+    with cols[col_idx]:
+        value = st.text_input(
+            f"Point {i+1}",
+            key=f"input_{i}",
+            value=st.session_state.data_points[i]
+        )
+        st.session_state.data_points[i] = value
+        
+        if value:
+            is_valid, float_val = validate_input(value)
+            if is_valid:
+                valid_inputs.append(float_val)
+            else:
+                st.error(f"Invalid input for Point {i+1}. Please enter a number.")
+                has_error = True
+
+# Process data and show results
+if len(valid_inputs) > 0 and not has_error:
+    stats = calculate_statistics(valid_inputs)
+    
+    if stats:
+        # Display results in columns
+        st.subheader("Statistical Results")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Basic Statistics")
+            st.write(f"**Mean:** {stats['mean']:.2f}")
+            st.write(f"**Standard Deviation:** {stats['std']:.2f}")
+            st.write(f"**Coefficient of Variation:** {stats['cv']:.2f}%")
+        
+        with col2:
+            st.markdown("### Standard Deviation Ranges")
+            for key, value in stats['sd_ranges'].items():
+                st.write(f"**{key} SD:** {value:.2f}")
+        
+        # Create visualization
+        st.subheader("Data Visualization")
+        
+        # Create figure
+        fig = go.Figure()
+        
+        # Add data points
+        x = list(range(1, len(valid_inputs) + 1))
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=valid_inputs,
+            mode='lines+markers',
+            name='Data Points',
+            line=dict(color='blue')
+        ))
+        
+        # Add mean line
+        fig.add_hline(
+            y=stats['mean'],
+            line_dash="dash",
+            line_color="black",
+            annotation_text="Mean"
+        )
+
+        # Add SD ranges with different colors
+        sd_colors = {
+            "+1": "green", "-1": "green",
+            "+2": "yellow", "-2": "yellow",
+            "+3": "red", "-3": "red"
+        }
+
+        for sd_key in ["+1", "-1", "+2", "-2", "+3", "-3"]:
+            fig.add_hline(
+                y=stats['sd_ranges'][sd_key],
+                line_dash="dot",
+                line_color=sd_colors[sd_key],
+                annotation_text=f"{sd_key} SD"
+            )
+        
+        # Update layout
+        fig.update_layout(
+            title="Data Points with Statistical Measures",
+            xaxis_title="Point Number",
+            yaxis_title="Value",
+            showlegend=True,
+            height=600,
+            plot_bgcolor='#f0f0f0',  # Light gray background
+            paper_bgcolor='white',
+            xaxis=dict(
+                showline=True,
+                showgrid=True,
+                gridcolor='white',  # White grid lines for contrast
+                linecolor='black',
+                linewidth=1
+            ),
+            yaxis=dict(
+                showline=True,
+                showgrid=True,
+                gridcolor='white',  # White grid lines for contrast
+                linecolor='black',
+                linewidth=1
+            )
+        )
+        
+        # Display plot
+        st.plotly_chart(fig, use_container_width=True)
+        
+elif len(valid_inputs) == 0 and not has_error:
+    st.info("Please enter some data points to begin analysis.")
+
+# Add instructions at the bottom
+with st.expander("How to Use This Tool"):
+    st.markdown("""
+    1. Enter numerical values in the input fields above
+    2. The tool will automatically calculate:
+        - Mean (average) of the data
+        - Standard Deviation
+        - Standard Deviation ranges (±1, ±2, ±3)
+        - Coefficient of Variation
+    3. The graph will show:
+        - Your data points connected by lines
+        - The mean value as a dashed line
+        - Standard deviation ranges as dotted lines
+    4. All calculations update automatically as you enter data
+    """)
