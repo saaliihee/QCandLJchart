@@ -1,4 +1,3 @@
 [server]
 headless = true
 address = "https://saaliihee.github.io/QCandLJchart/"
-port = 0000
