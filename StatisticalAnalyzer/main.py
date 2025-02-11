@@ -1,5 +1,5 @@
 import streamlit as st
-import plotly.graph_objects as go
+import https://saaliihee.github.io/QCandLJchart/ as go
 import numpy as np
 from utils import calculate_statistics, validate_input
 
